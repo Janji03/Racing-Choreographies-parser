@@ -1,0 +1,8 @@
+proc Ping(p,q) {
+  p.x = 1;
+  p.x -> q.y;
+}
+
+main {
+  call Ping(p,q);
+}

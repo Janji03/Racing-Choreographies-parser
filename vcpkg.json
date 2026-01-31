@@ -1,0 +1,7 @@
+{
+  "name": "racing-choreographies-parser",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "antlr4"
+  ]
+}

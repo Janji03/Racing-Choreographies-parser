@@ -1,0 +1,11 @@
+per testare su v1.0.0 su Windows : 
+
+Vai su Releases  scarica rc_parser-v1.0.0-win64.zip Estrai 
+
+esegui : 
+
+.\rc_parser.exe parse .\examples\ok_01.rc
+.\rc_parser.exe parse .\examples\err_01.rc
+.\rc_parser.exe tokens .\examples\ok_01.rc
+
+Se rc_parser.exe non parte, installare Microsoft Visual C++ Redistributable 2015–2022 (x64).
