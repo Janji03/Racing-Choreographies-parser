@@ -6,21 +6,27 @@
 class ErrorListener final : public antlr4::BaseErrorListener {
 public:
     struct SyntaxError {
+        std::string file;
         size_t line;
         size_t column;
         std::string message;
+        std::string offendingText; // token text (optional)
     };
 
-    void syntaxError(antlr4::Recognizer *recognizer,
-                     antlr4::Token *offendingSymbol,
+    explicit ErrorListener(std::string fileName = {})
+        : file_(std::move(fileName)) {}
+
+    void syntaxError(antlr4::Recognizer* recognizer,
+                     antlr4::Token* offendingSymbol,
                      size_t line,
                      size_t charPositionInLine,
-                     const std::string &msg,
+                     const std::string& msg,
                      std::exception_ptr e) override;
 
     bool hasErrors() const { return !errors_.empty(); }
     const std::vector<SyntaxError>& errors() const { return errors_; }
 
 private:
+    std::string file_;
     std::vector<SyntaxError> errors_;
 };

@@ -1,3 +1,13 @@
-main {
-  p.x = 1
+proc Ping(p q) {              //  manca la virgola tra i parametri
+  p.x = ;                     //  espressione mancante
+  p.x -> q;                   //  manca .y (procVar incompleto)
+  race p[k] : p.x q.y -> p.z; //  manca la virgola tra le due espressioni
+}
+
+main {                        //  ok main
+  call Ping(p);               //  numero di argomenti sbagliato
+  if (p.x) {                  //  condizione non booleana (sintatticamente ok ma utile per v3+)
+    p.x -> q.y                //  manca ;
+  } else
+    p.x = 1;                  //  else senza block
 }

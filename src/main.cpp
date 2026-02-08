@@ -23,6 +23,25 @@ static std::string readFileToString(const std::string& path) {
     return ss.str();
 }
 
+static std::vector<std::string> splitLines(const std::string& text) {
+    std::vector<std::string> lines;
+    std::string current;
+    for (char c : text) {
+        if (c == '\n') {
+            if (!current.empty() && current.back() == '\r') current.pop_back();
+            lines.push_back(current);
+            current.clear();
+        } else {
+            current.push_back(c);
+        }
+    }
+    if (!current.empty()) {
+        if (!current.empty() && current.back() == '\r') current.pop_back();
+        lines.push_back(current);
+    }
+    return lines;
+}
+
 static void printUsage() {
     std::cerr
         << "Usage:\n"
@@ -40,16 +59,39 @@ static void attachErrorListeners(RacingChoreoLexer& lexer,
     parser.addErrorListener(&errorListener);
 }
 
-static int printErrorsAndFail(const ErrorListener& errorListener) {
-    for (const auto& err : errorListener.errors()) {
-        std::cerr << "Syntax error at " << err.line << ":" << err.column
-                  << " - " << err.message << "\n";
+static void printPrettyError(const ErrorListener::SyntaxError& err,
+                             const std::vector<std::string>& lines) {
+    std::cerr << err.file << ":" << err.line << ":" << err.column
+              << ": error: " << err.message;
+
+    if (!err.offendingText.empty()) {
+        std::cerr << " (at '" << err.offendingText << "')";
     }
-    return 1;
+    std::cerr << "\n";
+
+    if (err.line == 0 || err.line > lines.size()) return;
+
+    const std::string& srcLine = lines[err.line - 1];
+    std::cerr << "  " << srcLine << "\n";
+
+    std::cerr << "  ";
+    for (size_t i = 0; i < err.column && i < srcLine.size(); ++i) {
+        std::cerr << (srcLine[i] == '\t' ? '\t' : ' ');
+    }
+    std::cerr << "^\n";
+}
+
+static int printErrorsAndFail(const ErrorListener& errorListener,
+                              const std::vector<std::string>& lines) {
+    for (const auto& err : errorListener.errors()) {
+        printPrettyError(err, lines);
+    }
+    return 1; // syntax error(s)
 }
 
 static int runParse(const std::string& filePath) {
     const std::string input = readFileToString(filePath);
+    const auto lines = splitLines(input);
 
     antlr4::ANTLRInputStream inputStream(input);
     RacingChoreoLexer lexer(&inputStream);
@@ -59,13 +101,13 @@ static int runParse(const std::string& filePath) {
 
     RacingChoreoParser parser(&tokens);
 
-    ErrorListener errorListener;
+    ErrorListener errorListener(filePath);
     attachErrorListeners(lexer, parser, errorListener);
 
     parser.program();
 
     if (errorListener.hasErrors()) {
-        return printErrorsAndFail(errorListener);
+        return printErrorsAndFail(errorListener, lines);
     }
 
     std::cout << "Parse OK\n";
@@ -96,6 +138,7 @@ static int runTokens(const std::string& filePath) {
 
 static int runAst(const std::string& filePath) {
     const std::string input = readFileToString(filePath);
+    const auto lines = splitLines(input);
 
     antlr4::ANTLRInputStream inputStream(input);
     RacingChoreoLexer lexer(&inputStream);
@@ -105,13 +148,13 @@ static int runAst(const std::string& filePath) {
 
     RacingChoreoParser parser(&tokens);
 
-    ErrorListener errorListener;
+    ErrorListener errorListener(filePath);
     attachErrorListeners(lexer, parser, errorListener);
 
     auto* tree = parser.program();
 
     if (errorListener.hasErrors()) {
-        return printErrorsAndFail(errorListener);
+        return printErrorsAndFail(errorListener, lines);
     }
 
     AstBuilderVisitor builder;
@@ -125,7 +168,7 @@ int main(int argc, char** argv) {
     try {
         if (argc != 3) {
             printUsage();
-            return 2;
+            return 2; // usage
         }
 
         const std::string command = argv[1];
@@ -146,6 +189,6 @@ int main(int argc, char** argv) {
 
     } catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << "\n";
-        return 2;
+        return 2; // io/internal
     }
 }
