@@ -4,16 +4,19 @@ project(racing_choreographies_parser LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# vcpkg / antlr4-runtime 
+# -------------------- Dependencies --------------------
 find_package(antlr4-runtime CONFIG REQUIRED)
 
-# paths 
+# -------------------- Paths --------------------
 set(GRAMMAR_DIR   "${CMAKE_SOURCE_DIR}/grammar")
 set(GENERATED_DIR "${CMAKE_SOURCE_DIR}/generated")
 
+# -------------------- ANTLR --------------------
 set(ANTLR_JAR "" CACHE FILEPATH "Path to antlr-4.x-complete.jar")
 if(NOT EXISTS "${ANTLR_JAR}")
-  message(FATAL_ERROR "ANTLR_JAR not set or not found. Set -DANTLR_JAR=.../antlr-4.13.x-complete.jar")
+  message(FATAL_ERROR
+    "ANTLR_JAR not set or not found. Set -DANTLR_JAR=.../antlr-4.13.x-complete.jar"
+  )
 endif()
 
 set(GRAMMAR_NAME "RacingChoreo")
@@ -48,13 +51,22 @@ add_custom_command(
   VERBATIM
 )
 
-add_custom_target(antlr_generate DEPENDS ${GENERATED_SOURCES} ${GENERATED_HEADERS})
+add_custom_target(antlr_generate
+  DEPENDS ${GENERATED_SOURCES} ${GENERATED_HEADERS}
+)
 
+# -------------------- Executable --------------------
 add_executable(rc_parser
   src/main.cpp
   src/ErrorListener.cpp
+
+  # v2 - AST
+  src/AstBuilderVisitor.cpp
+  src/AstPrinter.cpp
+
   ${GENERATED_SOURCES}
 )
+
 
 add_dependencies(rc_parser antlr_generate)
 
@@ -69,6 +81,7 @@ if(MSVC)
   target_compile_options(rc_parser PRIVATE /W4)
 endif()
 
+# -------------------- Tests --------------------
 include(CTest)
 enable_testing()
 
@@ -80,6 +93,11 @@ add_test(
 add_test(
   NAME parse_err_01
   COMMAND rc_parser parse "${CMAKE_SOURCE_DIR}/tests/err_01.rc"
+)
+
+add_test(
+  NAME ast_ok_01
+  COMMAND rc_parser ast "${CMAKE_SOURCE_DIR}/tests/ok_01.rc"
 )
 
 set_tests_properties(parse_err_01 PROPERTIES WILL_FAIL TRUE)

@@ -9,6 +9,9 @@
 #include "RacingChoreoParser.h"
 
 #include "ErrorListener.h"
+#include "ast/Ast.h"
+#include "AstBuilderVisitor.h"
+#include "AstPrinter.h"
 
 static std::string readFileToString(const std::string& path) {
     std::ifstream in(path, std::ios::binary);
@@ -24,7 +27,25 @@ static void printUsage() {
     std::cerr
         << "Usage:\n"
         << "  rc_parser parse  <file.rc>\n"
-        << "  rc_parser tokens <file.rc>\n";
+        << "  rc_parser tokens <file.rc>\n"
+        << "  rc_parser ast    <file.rc>\n";
+}
+
+static void attachErrorListeners(RacingChoreoLexer& lexer,
+                                 RacingChoreoParser& parser,
+                                 ErrorListener& errorListener) {
+    lexer.removeErrorListeners();
+    parser.removeErrorListeners();
+    lexer.addErrorListener(&errorListener);
+    parser.addErrorListener(&errorListener);
+}
+
+static int printErrorsAndFail(const ErrorListener& errorListener) {
+    for (const auto& err : errorListener.errors()) {
+        std::cerr << "Syntax error at " << err.line << ":" << err.column
+                  << " - " << err.message << "\n";
+    }
+    return 1;
 }
 
 static int runParse(const std::string& filePath) {
@@ -38,21 +59,13 @@ static int runParse(const std::string& filePath) {
 
     RacingChoreoParser parser(&tokens);
 
-    lexer.removeErrorListeners();
-    parser.removeErrorListeners();
-
     ErrorListener errorListener;
-    lexer.addErrorListener(&errorListener);
-    parser.addErrorListener(&errorListener);
+    attachErrorListeners(lexer, parser, errorListener);
 
     parser.program();
 
     if (errorListener.hasErrors()) {
-        for (const auto& err : errorListener.errors()) {
-            std::cerr << "Syntax error at " << err.line << ":" << err.column
-                      << " - " << err.message << "\n";
-        }
-        return 1;
+        return printErrorsAndFail(errorListener);
     }
 
     std::cout << "Parse OK\n";
@@ -81,6 +94,33 @@ static int runTokens(const std::string& filePath) {
     return 0;
 }
 
+static int runAst(const std::string& filePath) {
+    const std::string input = readFileToString(filePath);
+
+    antlr4::ANTLRInputStream inputStream(input);
+    RacingChoreoLexer lexer(&inputStream);
+
+    antlr4::CommonTokenStream tokens(&lexer);
+    tokens.fill();
+
+    RacingChoreoParser parser(&tokens);
+
+    ErrorListener errorListener;
+    attachErrorListeners(lexer, parser, errorListener);
+
+    auto* tree = parser.program();
+
+    if (errorListener.hasErrors()) {
+        return printErrorsAndFail(errorListener);
+    }
+
+    AstBuilderVisitor builder;
+    auto astProgram = builder.build(tree);
+
+    AstPrinter::print(std::cout, *astProgram);
+    return 0;
+}
+
 int main(int argc, char** argv) {
     try {
         if (argc != 3) {
@@ -96,6 +136,9 @@ int main(int argc, char** argv) {
         }
         if (command == "tokens") {
             return runTokens(filePath);
+        }
+        if (command == "ast") {
+            return runAst(filePath);
         }
 
         printUsage();

@@ -1,8 +1,21 @@
-proc Ping(p,q) {
-  p.x = 1;
-  p.x -> q.y;
+proc Request(c, w1, w2, s) {
+    c.req -> s.req;
+    w1.r = req;
+    w2.r = req;
+
+    race s[k] : w1.r , w2.r -> s.ans;
+
+    if (s[k]) {
+        s.ans -> c.res;
+        s -> c[FromW1];
+        discharge s[k] : w2 -> s.lost;
+    } else {
+        s.ans -> c.res;
+        s -> c[FromW2];
+        discharge s[k] : w1 -> s.lost;
+    }
 }
 
 main {
-  call Ping(p,q);
+    call Request(c, w1, w2, s);
 }
