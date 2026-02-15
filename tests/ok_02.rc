@@ -1,0 +1,37 @@
+proc Example(p, q, r, s) {
+
+    // race: p.x e q.y competono -> il primo arrivato finisce in s.d
+    race s[k] : p.x , q.y -> s.d;
+
+    // if su esito della race
+    if (s[k]) {
+
+        // discharge del "perdente" (nel paper è s.- come placeholder)
+        discharge s[k] : q -> s.lost;
+
+        // selezioni: notifica del ramo scelto
+        s -> p[L];
+        s -> q[L];
+
+        // comunicazioni successive
+        s.d -> q.x;
+        q.y -> r.z;
+
+    } else {
+
+        // discharge del "perdente" (placeholder nel paper)
+        discharge s[k] : p -> s.lost;
+
+        // selezioni: notifica del ramo scelto
+        s -> p[R];
+        s -> q[R];
+
+        // comunicazioni successive
+        s.d -> p.x;
+        q.y -> r.z;
+    }
+}
+
+main {
+    call Example(p, q, r, s);
+}

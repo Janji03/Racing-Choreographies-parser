@@ -1,5 +1,4 @@
 #pragma once
-
 #include <memory>
 #include <string>
 #include <vector>
@@ -12,12 +11,20 @@
 
 class AstBuilderVisitor final : public RacingChoreoBaseVisitor {
 public:
+    explicit AstBuilderVisitor(std::string file = "<unknown>")
+        : file_(std::move(file)) {}
+
     // entry point comodo: costruisce l'AST da un parse tree program()
     std::unique_ptr<ast::Program> build(RacingChoreoParser::ProgramContext* ctx);
 
 private:
-    // ---- helpers per estrarre testo ID ----
+    std::string file_;
+
     static std::string idText(antlr4::tree::TerminalNode* id);
+
+    // location helpers
+    ast::SourceRange locFrom(antlr4::ParserRuleContext* ctx) const;
+    static ast::SourcePos posFromToken(const antlr4::Token* tok);
 
     // ---- build functions (mappano 1-1 le parser rules) ----
     std::unique_ptr<ast::Program> buildProgram(RacingChoreoParser::ProgramContext* ctx);

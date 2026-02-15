@@ -1,0 +1,3 @@
+main {
+  call MissingProc(p);
+}

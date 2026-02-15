@@ -13,24 +13,43 @@ std::string AstBuilderVisitor::idText(antlr4::tree::TerminalNode* id) {
     return id->getText();
 }
 
+ast::SourcePos AstBuilderVisitor::posFromToken(const antlr4::Token* tok) {
+    ast::SourcePos p;
+    if (!tok) return p;
+    p.line = static_cast<uint32_t>(tok->getLine());
+    p.col  = static_cast<uint32_t>(tok->getCharPositionInLine());
+    return p;
+}
+
+ast::SourceRange AstBuilderVisitor::locFrom(antlr4::ParserRuleContext* ctx) const {
+    ast::SourceRange r;
+    r.file = file_;
+    if (!ctx) return r;
+
+    const antlr4::Token* start = ctx->getStart();
+    const antlr4::Token* stop  = ctx->getStop();
+
+    r.start = posFromToken(start);
+    r.end   = posFromToken(stop);
+    return r;
+}
+
 // ===== program =====
 std::unique_ptr<ast::Program> AstBuilderVisitor::buildProgram(RacingChoreoParser::ProgramContext* ctx) {
     auto prog = std::make_unique<ast::Program>();
+    prog->loc = locFrom(ctx);
 
-    // procDef*
     for (auto* pd : ctx->procDef()) {
         prog->procedures.push_back(buildProcDef(pd));
     }
-
-    // mainDef
     prog->main = buildMain(ctx->mainDef());
-
     return prog;
 }
 
 // ===== mainDef =====
 std::unique_ptr<ast::Main> AstBuilderVisitor::buildMain(RacingChoreoParser::MainDefContext* ctx) {
     auto m = std::make_unique<ast::Main>();
+    m->loc = locFrom(ctx);
     m->body = buildBlock(ctx->block());
     return m;
 }
@@ -38,6 +57,7 @@ std::unique_ptr<ast::Main> AstBuilderVisitor::buildMain(RacingChoreoParser::Main
 // ===== procDef =====
 std::unique_ptr<ast::ProcDef> AstBuilderVisitor::buildProcDef(RacingChoreoParser::ProcDefContext* ctx) {
     auto p = std::make_unique<ast::ProcDef>();
+    p->loc = locFrom(ctx);
     p->name = buildProcName(ctx->procName());
     p->params = buildProcParams(ctx->procParams());
     p->body = buildBlock(ctx->block());
@@ -64,6 +84,7 @@ std::vector<ast::Process> AstBuilderVisitor::buildProcArgs(RacingChoreoParser::P
 // ===== block =====
 std::unique_ptr<ast::Block> AstBuilderVisitor::buildBlock(RacingChoreoParser::BlockContext* ctx) {
     auto b = std::make_unique<ast::Block>();
+    b->loc = locFrom(ctx);
     for (auto* s : ctx->stmt()) {
         b->statements.push_back(buildStmt(s));
     }
@@ -73,19 +94,23 @@ std::unique_ptr<ast::Block> AstBuilderVisitor::buildBlock(RacingChoreoParser::Bl
 // ===== stmt =====
 std::unique_ptr<ast::Stmt> AstBuilderVisitor::buildStmt(RacingChoreoParser::StmtContext* ctx) {
     if (ctx->interactionStmt()) {
-        auto st = ast::Stmt{ buildInteractionStmt(ctx->interactionStmt()) };
+        ast::InteractionStmt is = buildInteractionStmt(ctx->interactionStmt());
+        auto st = ast::Stmt{ std::move(is) };
         return std::make_unique<ast::Stmt>(std::move(st));
     }
     if (ctx->callStmt()) {
-        auto st = ast::Stmt{ buildCallStmt(ctx->callStmt()) };
+        ast::CallStmt cs = buildCallStmt(ctx->callStmt());
+        auto st = ast::Stmt{ std::move(cs) };
         return std::make_unique<ast::Stmt>(std::move(st));
     }
     if (ctx->ifLocalStmt()) {
-        auto st = ast::Stmt{ buildIfLocalStmt(ctx->ifLocalStmt()) };
+        ast::IfLocalStmt s = buildIfLocalStmt(ctx->ifLocalStmt());
+        auto st = ast::Stmt{ std::move(s) };
         return std::make_unique<ast::Stmt>(std::move(st));
     }
     if (ctx->ifRaceStmt()) {
-        auto st = ast::Stmt{ buildIfRaceStmt(ctx->ifRaceStmt()) };
+        ast::IfRaceStmt s = buildIfRaceStmt(ctx->ifRaceStmt());
+        auto st = ast::Stmt{ std::move(s) };
         return std::make_unique<ast::Stmt>(std::move(st));
     }
 
@@ -95,6 +120,7 @@ std::unique_ptr<ast::Stmt> AstBuilderVisitor::buildStmt(RacingChoreoParser::Stmt
 // ===== call / if =====
 ast::CallStmt AstBuilderVisitor::buildCallStmt(RacingChoreoParser::CallStmtContext* ctx) {
     ast::CallStmt c;
+    c.loc = locFrom(ctx);
     c.proc = buildProcName(ctx->procName());
     c.args = buildProcArgs(ctx->procArgs());
     return c;
@@ -102,6 +128,7 @@ ast::CallStmt AstBuilderVisitor::buildCallStmt(RacingChoreoParser::CallStmtConte
 
 ast::IfLocalStmt AstBuilderVisitor::buildIfLocalStmt(RacingChoreoParser::IfLocalStmtContext* ctx) {
     ast::IfLocalStmt s;
+    s.loc = locFrom(ctx);
     s.condition = buildProcExpr(ctx->procExpr());
     s.thenBlock = buildBlock(ctx->block(0));
     s.elseBlock = buildBlock(ctx->block(1));
@@ -110,6 +137,7 @@ ast::IfLocalStmt AstBuilderVisitor::buildIfLocalStmt(RacingChoreoParser::IfLocal
 
 ast::IfRaceStmt AstBuilderVisitor::buildIfRaceStmt(RacingChoreoParser::IfRaceStmtContext* ctx) {
     ast::IfRaceStmt s;
+    s.loc = locFrom(ctx);
     s.condition = buildRaceId(ctx->raceId());
     s.thenBlock = buildBlock(ctx->block(0));
     s.elseBlock = buildBlock(ctx->block(1));
@@ -119,6 +147,7 @@ ast::IfRaceStmt AstBuilderVisitor::buildIfRaceStmt(RacingChoreoParser::IfRaceStm
 // ===== interactionStmt / interaction =====
 ast::InteractionStmt AstBuilderVisitor::buildInteractionStmt(RacingChoreoParser::InteractionStmtContext* ctx) {
     ast::InteractionStmt s;
+    s.loc = locFrom(ctx);
     s.interaction = buildInteraction(ctx->interaction());
     return s;
 }
@@ -135,6 +164,7 @@ ast::Interaction AstBuilderVisitor::buildInteraction(RacingChoreoParser::Interac
 // ===== concrete interactions =====
 ast::Comm AstBuilderVisitor::buildComm(RacingChoreoParser::CommContext* ctx) {
     ast::Comm c;
+    c.loc = locFrom(ctx);
     c.from = buildProcExpr(ctx->procExpr());
     c.to = buildProcVar(ctx->procVar());
     return c;
@@ -142,6 +172,7 @@ ast::Comm AstBuilderVisitor::buildComm(RacingChoreoParser::CommContext* ctx) {
 
 ast::Select AstBuilderVisitor::buildSelect(RacingChoreoParser::SelectContext* ctx) {
     ast::Select s;
+    s.loc = locFrom(ctx);
     s.from = buildProcess(ctx->process(0));
     s.to = buildProcess(ctx->process(1));
     s.label = buildLabel(ctx->label());
@@ -150,6 +181,7 @@ ast::Select AstBuilderVisitor::buildSelect(RacingChoreoParser::SelectContext* ct
 
 ast::Assign AstBuilderVisitor::buildAssign(RacingChoreoParser::AssignContext* ctx) {
     ast::Assign a;
+    a.loc = locFrom(ctx);
     a.target = buildProcVar(ctx->procVar());
     a.value = buildExpr(ctx->expr());
     return a;
@@ -157,6 +189,7 @@ ast::Assign AstBuilderVisitor::buildAssign(RacingChoreoParser::AssignContext* ct
 
 ast::Race AstBuilderVisitor::buildRace(RacingChoreoParser::RaceContext* ctx) {
     ast::Race r;
+    r.loc = locFrom(ctx);
     r.id = buildRaceId(ctx->raceId());
     r.left = buildProcExpr(ctx->procExpr(0));
     r.right = buildProcExpr(ctx->procExpr(1));
@@ -166,6 +199,7 @@ ast::Race AstBuilderVisitor::buildRace(RacingChoreoParser::RaceContext* ctx) {
 
 ast::Discharge AstBuilderVisitor::buildDischarge(RacingChoreoParser::DischargeContext* ctx) {
     ast::Discharge d;
+    d.loc = locFrom(ctx);
     d.id = buildRaceId(ctx->raceId());
     d.source = buildProcess(ctx->process());
     d.target = buildProcVar(ctx->procVar());
@@ -175,6 +209,7 @@ ast::Discharge AstBuilderVisitor::buildDischarge(RacingChoreoParser::DischargeCo
 // ===== procExpr / procVar / expr / raceId =====
 ast::ProcExpr AstBuilderVisitor::buildProcExpr(RacingChoreoParser::ProcExprContext* ctx) {
     ast::ProcExpr pe;
+    pe.loc = locFrom(ctx);
     pe.process = buildProcess(ctx->process());
     pe.expr = buildExpr(ctx->expr());
     return pe;
@@ -182,6 +217,7 @@ ast::ProcExpr AstBuilderVisitor::buildProcExpr(RacingChoreoParser::ProcExprConte
 
 ast::ProcVar AstBuilderVisitor::buildProcVar(RacingChoreoParser::ProcVarContext* ctx) {
     ast::ProcVar pv;
+    pv.loc = locFrom(ctx);
     pv.process = buildProcess(ctx->process());
     pv.var = buildVar(ctx->var());
     return pv;
@@ -190,14 +226,16 @@ ast::ProcVar AstBuilderVisitor::buildProcVar(RacingChoreoParser::ProcVarContext*
 ast::Expr AstBuilderVisitor::buildExpr(RacingChoreoParser::ExprContext* ctx) {
     if (ctx->var()) {
         ast::ExprVar v{ buildVar(ctx->var()) };
+        v.loc = locFrom(ctx);
         return ast::Expr{ v };
     }
 
-    // value: INT | TRUE | FALSE
     auto* vctx = ctx->value();
     if (!vctx) throw std::runtime_error("Expr without var/value");
 
     ast::Value val;
+    val.loc = locFrom(ctx);
+
     if (vctx->INT()) {
         val.kind = ast::Value::Kind::Int;
         val.intValue = std::stoi(vctx->INT()->getText());
@@ -215,28 +253,25 @@ ast::Expr AstBuilderVisitor::buildExpr(RacingChoreoParser::ExprContext* ctx) {
 
 ast::RaceId AstBuilderVisitor::buildRaceId(RacingChoreoParser::RaceIdContext* ctx) {
     ast::RaceId id;
+    id.loc = locFrom(ctx);
     id.process = buildProcess(ctx->process());
-    id.key = ctx->raceKey()->getText(); // raceKey : ID ;
+    id.key = ctx->raceKey()->getText();
     return id;
 }
 
 // ===== leaves =====
 ast::Process AstBuilderVisitor::buildProcess(RacingChoreoParser::ProcessContext* ctx) {
-    // process : ID ;
     return idText(ctx->ID());
 }
 
 ast::Var AstBuilderVisitor::buildVar(RacingChoreoParser::VarContext* ctx) {
-    // var : ID ;
     return idText(ctx->ID());
 }
 
 ast::Label AstBuilderVisitor::buildLabel(RacingChoreoParser::LabelContext* ctx) {
-    // label : ID ;
     return idText(ctx->ID());
 }
 
 ast::ProcName AstBuilderVisitor::buildProcName(RacingChoreoParser::ProcNameContext* ctx) {
-    // procName : ID ;
     return idText(ctx->ID());
 }
