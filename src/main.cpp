@@ -17,7 +17,7 @@
 #include "AstJson.h"
 #include "Validation.h"
 
-static constexpr const char* RC_PARSER_VERSION = "1.0.0";
+static constexpr const char* RC_PARSER_VERSION = "4.0.0";
 
 // -------------------- IO helpers --------------------
 static std::string readFileToString(const std::string& path) {

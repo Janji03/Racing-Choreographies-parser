@@ -31,3 +31,10 @@ CTestTestfile.cmake
 Thumbs.db
 
 dist/
+
+# Release artifacts
+/dist/
+/release_temp/
+/temp_check/
+*.zip
+
