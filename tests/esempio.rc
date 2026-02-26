@@ -1,0 +1,5 @@
+main {
+  c.x = 5;
+  c.x -> s.req;
+  s -> c[Hello];
+}

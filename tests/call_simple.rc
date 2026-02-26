@@ -1,0 +1,8 @@
+proc P(a,b) {
+  a.x = 1;
+  a.x -> b.y;
+}
+
+main {
+  call P(c, s);
+}

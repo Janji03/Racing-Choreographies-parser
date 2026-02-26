@@ -6,7 +6,7 @@ proc Example(p, q, r, s) {
     // if su esito della race
     if (s[k]) {
 
-        // discharge del "perdente" (nel paper è s.- come placeholder)
+        // discharge del "perdente" 
         discharge s[k] : q -> s.lost;
 
         // selezioni: notifica del ramo scelto
@@ -19,7 +19,7 @@ proc Example(p, q, r, s) {
 
     } else {
 
-        // discharge del "perdente" (placeholder nel paper)
+        // discharge del "perdente" 
         discharge s[k] : p -> s.lost;
 
         // selezioni: notifica del ramo scelto

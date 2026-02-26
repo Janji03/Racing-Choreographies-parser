@@ -1,0 +1,8 @@
+main {
+  c.flag = true;
+  if (c.flag) {
+    c.x = 1;
+  } else {
+    c.x = 2;
+  }
+}

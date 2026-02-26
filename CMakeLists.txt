@@ -68,6 +68,15 @@ add_executable(rc_parser
   # Validation
   src/Validation.cpp
 
+  # -------------------- Simulator (ADD THESE) --------------------
+  src/sim/Simulator.cpp
+
+  # If you have these as .cpp, list them; if they are header-only it's fine to omit.
+  # src/runtime/Store.cpp
+  # src/runtime/Trace.cpp
+  # src/runtime/RaceMemory.cpp
+  # src/runtime/RuntimeError.cpp
+
   ${GENERATED_SOURCES}
 )
 

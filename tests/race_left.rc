@@ -1,0 +1,5 @@
+main {
+  w1.r = 1;
+  w2.r = 2;
+  race s[k] : w1.r , w2.r -> s.ans;
+}
