@@ -10,4 +10,4 @@ public:
     static SimulationResult run(const ast::Program& program, const SimOptions& opt);
 };
 
-} // namespace sim
+} 

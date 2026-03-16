@@ -26,4 +26,4 @@ struct SimulationResult {
     std::vector<RuntimeErrorInfo> runtimeErrors;
 };
 
-} // namespace sim
+} 

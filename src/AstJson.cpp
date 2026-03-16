@@ -259,4 +259,4 @@ std::string serialize(const ast::Program& program) {
     return ss.str();
 }
 
-} // namespace astjson
+} 

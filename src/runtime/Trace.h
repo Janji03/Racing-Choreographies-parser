@@ -9,11 +9,10 @@ namespace runtime {
 struct TraceEvent {
     std::string kind;     // "asg", "com", "race", "if", ...
     std::string message;  // printable line
-    ast::SourceRange loc; // where it happened (best-effort)
-
+    ast::SourceRange loc; 
     // For CLI trace
     std::string toString() const {
-        // Example: asg @file:line:col message
+        
         std::string out = kind;
         if (!loc.file.empty()) {
             out += " @" + loc.file + ":" + std::to_string(loc.start.line) + ":" + std::to_string(loc.start.col);
@@ -25,4 +24,4 @@ struct TraceEvent {
 
 using Trace = std::vector<TraceEvent>;
 
-} // namespace runtime
+} 

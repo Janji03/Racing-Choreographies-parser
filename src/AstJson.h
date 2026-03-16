@@ -7,4 +7,4 @@ namespace astjson {
 // Serializza l'AST Program in JSON (string già pronta, indentata).
 std::string serialize(const ast::Program& program);
 
-} // namespace astjson
+} 

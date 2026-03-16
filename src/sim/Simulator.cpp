@@ -539,4 +539,4 @@ SimulationResult Simulator::run(const ast::Program& program, const SimOptions& o
     }
 }
 
-} // namespace sim
+} 

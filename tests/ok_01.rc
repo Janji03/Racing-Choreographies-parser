@@ -1,7 +1,10 @@
 proc Request(c, w1, w2, s) {
-    c.req -> s.req;
-    w1.r = req;
-    w2.r = req;
+    s.start=0;
+    s.start -> w1.start;
+    s.start -> w2.start;
+
+    w1.r = 7;
+    w2.r = 5;
 
     race s[k] : w1.r , w2.r -> s.ans;
 

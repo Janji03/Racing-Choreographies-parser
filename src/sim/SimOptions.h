@@ -34,4 +34,4 @@ struct SimOptions {
     std::vector<InitBinding> init;
 };
 
-} // namespace sim
+} 
